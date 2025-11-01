@@ -38,7 +38,7 @@ func (r *Repository) createTables() error {
 			variety TEXT NOT NULL,
 			length INTEGER NOT NULL,
 			box_count REAL NOT NULL,
-			pack_rate INTEGER NOT NULL,
+		 pack_rate INTEGER NOT NULL,
 			total_stems INTEGER NOT NULL,
 			farm_name TEXT NOT NULL,
 			truck_name TEXT NOT NULL,
@@ -183,7 +183,9 @@ func (r *Repository) Create(ctx context.Context, order *domain.Order) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Ignore rollback error as transaction may already be committed
+	}()
 
 	_, err = tx.ExecContext(
 		ctx, `
