@@ -43,11 +43,12 @@ jobs:
     - name: Run tests
       run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        flags: unittests
-        name: codecov-umbrella
+    # TODO: Add Codecov token to secrets
+    # - name: Upload coverage to Codecov
+    #   uses: codecov/codecov-action@v5
+    #   with:
+    #     flags: unittests
+    #     name: codecov-umbrella
 
   lint:
     name: Lint
