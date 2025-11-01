@@ -69,6 +69,7 @@ func (a *App) Initialize() error {
 }
 
 func (a *App) setupMiddleware() {
+	a.router.Use(a.loggingMiddleware())
 	a.router.Use(gin.Logger())
 	a.router.Use(gin.Recovery())
 	a.router.Use(a.corsMiddleware())
@@ -98,7 +99,10 @@ func (a *App) corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		c.Header(
+			"Access-Control-Allow-Headers",
+			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization",
+		)
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
@@ -109,20 +113,33 @@ func (a *App) corsMiddleware() gin.HandlerFunc {
 	}
 }
 
+func (a *App) loggingMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		duration := time.Since(start)
+		a.logger.LogRequest(c.Request.Context(), c.Request.Method, c.Request.URL.Path, c.Writer.Status(), duration)
+	}
+}
+
 // healthCheck обработчик проверки здоровья приложения
 func (a *App) healthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":    "ok",
-		"timestamp": time.Now().UTC(),
-		"service":   "dolina-flower-order-backend",
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"status":    "ok",
+			"timestamp": time.Now().UTC(),
+			"service":   "dolina-flower-order-backend",
+		},
+	)
 }
 
 // ping простой обработчик для тестирования
 func (a *App) ping(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "pong",
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"message": "pong",
+		},
+	)
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -156,7 +173,9 @@ func (a *App) Shutdown() error {
 	defer cancel()
 
 	if a.repo != nil {
-		a.repo.Close()
+		if err := a.repo.Close(); err != nil {
+			a.logger.WithError(err).Error("Failed to close database connection")
+		}
 	}
 
 	if err := a.server.Shutdown(ctx); err != nil {

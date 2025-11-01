@@ -20,11 +20,13 @@ func NewFlowerHandler(orderService *services.OrderService) *FlowerHandler {
 func (h *FlowerHandler) GetAvailableFlowers(c *gin.Context) {
 	flowers, err := h.orderService.GetAvailableFlowers(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to get flowers: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"flowers": flowers,
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"flowers": flowers,
+		},
+	)
 }
