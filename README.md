@@ -45,7 +45,7 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone <repository-url>
+git clone https://github.com/maxviazov/dolina-flower-order-backend.git
 cd dolina-flower-order-backend
 ```
 
@@ -217,4 +217,4 @@ go test -bench=. ./...
 
 - Разработчик: Maxim Viazov
 - Email: maxim@viazov.com
-- Проект: [ссылка на репозиторий]
+- Проект: https://github.com/maxviazov/dolina-flower-order-backend
