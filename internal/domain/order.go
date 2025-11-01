@@ -17,26 +17,31 @@ const (
 
 // Order представляет заказ клиента
 type Order struct {
-	ID          string      `json:"id"`
-	CustomerID  string      `json:"customer_id"`
+	ID          string      `json:"id" db:"id"`
+	MarkBox     string      `json:"mark_box" db:"mark_box"`
+	CustomerID  string      `json:"customer_id" db:"customer_id"`
 	Items       []Item      `json:"items"`
-	Status      OrderStatus `json:"status"`
-	CreatedAt   time.Time   `json:"created_at"`
-	ProcessedAt *time.Time  `json:"processed_at,omitempty"`
-	FarmOrderID *string     `json:"farm_order_id,omitempty"`
-	Notes       string      `json:"notes,omitempty"`
-	TotalAmount float64     `json:"total_amount"`
+	Status      OrderStatus `json:"status" db:"status"`
+	CreatedAt   time.Time   `json:"created_at" db:"created_at"`
+	ProcessedAt *time.Time  `json:"processed_at,omitempty" db:"processed_at"`
+	FarmOrderID *string     `json:"farm_order_id,omitempty" db:"farm_order_id"`
+	Notes       string      `json:"notes,omitempty" db:"notes"`
+	TotalAmount float64     `json:"total_amount" db:"total_amount"`
 }
 
 // Item представляет позицию в заказе
 type Item struct {
-	ID         string  `json:"id"`
-	FlowerType string  `json:"flower_type"`
-	Variety    string  `json:"variety,omitempty"`
-	Color      string  `json:"color,omitempty"`
-	Quantity   int     `json:"quantity"`
-	Price      float64 `json:"price"`
-	Notes      string  `json:"notes,omitempty"`
+	ID         string  `json:"id" db:"id"`
+	OrderID    string  `json:"order_id" db:"order_id"`
+	Variety    string  `json:"variety" db:"variety"`
+	Length     int     `json:"length" db:"length"`
+	BoxCount   float64 `json:"box_count" db:"box_count"`
+	PackRate   int     `json:"pack_rate" db:"pack_rate"`
+	TotalStems int     `json:"total_stems" db:"total_stems"`
+	FarmName   string  `json:"farm_name" db:"farm_name"`
+	TruckName  string  `json:"truck_name" db:"truck_name"`
+	Comments   string  `json:"comments,omitempty" db:"comments"`
+	Price      float64 `json:"price,omitempty" db:"price"`
 }
 
 // Customer представляет клиента
@@ -85,7 +90,7 @@ type FarmOrder struct {
 func (o *Order) CalculateTotal() float64 {
 	total := 0.0
 	for _, item := range o.Items {
-		total += item.Price * float64(item.Quantity)
+		total += item.Price * float64(item.TotalStems)
 	}
 	o.TotalAmount = total
 	return total

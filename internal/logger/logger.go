@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"dolina-flower-order-backend/internal/config"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

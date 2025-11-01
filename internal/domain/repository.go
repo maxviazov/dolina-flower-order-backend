@@ -8,11 +8,8 @@ import (
 type OrderRepository interface {
 	Create(ctx context.Context, order *Order) error
 	GetByID(ctx context.Context, id string) (*Order, error)
-	GetByCustomerID(ctx context.Context, customerID string) ([]*Order, error)
 	GetByStatus(ctx context.Context, status OrderStatus) ([]*Order, error)
 	Update(ctx context.Context, order *Order) error
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, limit, offset int) ([]*Order, error)
 }
 
 // CustomerRepository интерфейс для работы с клиентами
@@ -20,9 +17,6 @@ type CustomerRepository interface {
 	Create(ctx context.Context, customer *Customer) error
 	GetByID(ctx context.Context, id string) (*Customer, error)
 	GetByEmail(ctx context.Context, email string) (*Customer, error)
-	Update(ctx context.Context, customer *Customer) error
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, limit, offset int) ([]*Customer, error)
 }
 
 // FarmOrderRepository интерфейс для работы с заказами фермы

@@ -9,113 +9,103 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	"dolina-flower-order-backend/internal/config"
-	"dolina-flower-order-backend/internal/logger"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/config"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/handlers"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/logger"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/repository/sqlite"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/services"
 )
 
-// App представляет основное приложение
 type App struct {
 	config *config.Config
 	logger *logger.Logger
 	server *http.Server
 	router *gin.Engine
+	repo   *sqlite.Repository
 }
 
-// New создает новый экземпляр приложения
 func New() *App {
 	return &App{
 		logger: logger.GetLogger(),
 	}
 }
 
-// Initialize инициализирует приложение
 func (a *App) Initialize() error {
-	// Загружаем конфигурацию
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	a.config = cfg
 
-	// Инициализируем логгер
 	if err := a.logger.Initialize(cfg); err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
 	a.logger.Info("Application initializing...")
 
-	// Настраиваем Gin
+	repo, err := sqlite.NewRepository("./flowers.db")
+	if err != nil {
+		return fmt.Errorf("failed to initialize database: %w", err)
+	}
+	a.repo = repo
+
 	if a.config.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Создаем роутер
 	a.router = gin.New()
 	a.setupMiddleware()
 	a.setupRoutes()
 
-	// Создаем HTTP сервер
 	a.server = &http.Server{
-		Addr:         a.config.GetServerAddress(),
-		Handler:      a.router,
-		ReadTimeout:  a.config.Server.ReadTimeout,
-		WriteTimeout: a.config.Server.WriteTimeout,
-		IdleTimeout:  a.config.Server.IdleTimeout,
+		Addr:    a.config.GetServerAddress(),
+		Handler: a.router,
 	}
 
-	a.logger.Infof("Application initialized successfully on %s", a.config.GetServerAddress())
+	a.logger.Info("Application initialized successfully")
 	return nil
 }
 
-// setupMiddleware настраивает middleware
 func (a *App) setupMiddleware() {
-	// Логирование запросов
-	a.router.Use(a.loggingMiddleware())
-
-	// Recovery middleware
+	a.router.Use(gin.Logger())
 	a.router.Use(gin.Recovery())
-
-	// CORS middleware
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = a.config.Security.CORSOrigins
-	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"}
-	a.router.Use(cors.New(corsConfig))
+	a.router.Use(a.corsMiddleware())
 }
 
-// setupRoutes настраивает маршруты
 func (a *App) setupRoutes() {
-	// Health check
 	a.router.GET("/health", a.healthCheck)
 
-	// API группа
+	orderService := services.NewOrderService(a.repo)
+	orderHandler := handlers.NewOrderHandler(orderService)
+	flowerHandler := handlers.NewFlowerHandler(orderService)
+
 	api := a.router.Group("/api/v1")
 	{
-		// Пока базовые маршруты для MVP
 		api.GET("/ping", a.ping)
+		api.GET("/flowers", flowerHandler.GetAvailableFlowers)
+
+		orders := api.Group("/orders")
+		{
+			orders.POST("", orderHandler.CreateOrder)
+			orders.GET("/:id", orderHandler.GetOrder)
+		}
 	}
 }
 
-// loggingMiddleware создает middleware для логирования запросов
-func (a *App) loggingMiddleware() gin.HandlerFunc {
+func (a *App) corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		start := time.Now()
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
-		// Обрабатываем запрос
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
 		c.Next()
-
-		// Логируем после обработки
-		duration := time.Since(start)
-		a.logger.LogRequest(
-			c.Request.Context(),
-			c.Request.Method,
-			c.Request.URL.Path,
-			c.Writer.Status(),
-			duration,
-		)
 	}
 }
 
@@ -135,23 +125,20 @@ func (a *App) ping(c *gin.Context) {
 	})
 }
 
-// Run запускает приложение
 func (a *App) Run(ctx context.Context) error {
-	// Канал для получения сигналов завершения
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Запускаем сервер в горутине
+	a.logger.WithField("address", a.server.Addr).Info("Starting server")
+
 	go func() {
-		a.logger.Infof("Starting server on %s", a.config.GetServerAddress())
 		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			a.logger.Fatalf("Failed to start server: %v", err)
+			a.logger.WithError(err).Fatal("Failed to start server")
 		}
 	}()
 
 	a.logger.Info("Server started successfully")
 
-	// Ждем сигнал завершения
 	select {
 	case <-quit:
 		a.logger.Info("Shutdown signal received")
@@ -162,17 +149,18 @@ func (a *App) Run(ctx context.Context) error {
 	return a.Shutdown()
 }
 
-// Shutdown корректно завершает работу приложения
 func (a *App) Shutdown() error {
 	a.logger.Info("Shutting down server...")
 
-	// Создаем контекст с таймаутом для завершения
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Завершаем HTTP сервер
+	if a.repo != nil {
+		a.repo.Close()
+	}
+
 	if err := a.server.Shutdown(ctx); err != nil {
-		a.logger.Errorf("Server forced to shutdown: %v", err)
+		a.logger.Error("Server forced to shutdown")
 		return err
 	}
 

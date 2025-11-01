@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolina Flower API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #45a049; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 4px; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <h1>🌹 Dolina Flower API Test</h1>
+
+    <div class="section">
+        <h2>1. Health Check</h2>
+        <button onclick="testHealth()">Test Health</button>
+        <pre id="health-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>2. Get Flowers</h2>
+        <button onclick="getFlowers()">Get Available Flowers</button>
+        <pre id="flowers-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Create Order</h2>
+        <input type="text" id="customer_id" placeholder="Customer ID" value="CUST001">
+        <input type="text" id="customer_name" placeholder="Customer Name" value="Иван Иванов">
+        <input type="email" id="customer_email" placeholder="Email" value="ivan@example.com">
+        <input type="tel" id="customer_phone" placeholder="Phone" value="+79001234567">
+        <input type="text" id="mark_box" placeholder="Mark Box" value="MB-001">
+        <textarea id="order_items" rows="5" placeholder='[{"flower_id": "1", "quantity": 50}]'>[{"flower_id": "1", "quantity": 50}]</textarea>
+        <button onclick="createOrder()">Create Order</button>
+        <pre id="order-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>4. Get Order</h2>
+        <input type="text" id="order_id" placeholder="Order ID" value="1">
+        <button onclick="getOrder()">Get Order</button>
+        <pre id="get-order-result"></pre>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                document.getElementById('health-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('health-result').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function getFlowers() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/flowers`);
+                const data = await response.json();
+                document.getElementById('flowers-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('flowers-result').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function createOrder() {
+            try {
+                const items = JSON.parse(document.getElementById('order_items').value);
+                const orderData = {
+                    customer_id: document.getElementById('customer_id').value,
+                    customer_name: document.getElementById('customer_name').value,
+                    customer_email: document.getElementById('customer_email').value,
+                    customer_phone: document.getElementById('customer_phone').value,
+                    mark_box: document.getElementById('mark_box').value,
+                    items: items
+                };
+
+                const response = await fetch(`${API_URL}/api/v1/orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+                const data = await response.json();
+                document.getElementById('order-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('order-result').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function getOrder() {
+            try {
+                const orderId = document.getElementById('order_id').value;
+                const response = await fetch(`${API_URL}/api/v1/orders/${orderId}`);
+                const data = await response.json();
+                document.getElementById('get-order-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('get-order-result').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
