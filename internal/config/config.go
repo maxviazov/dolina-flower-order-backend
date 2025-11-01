@@ -17,7 +17,7 @@ type Config struct {
 // ServerConfig конфигурация сервера
 type ServerConfig struct {
 	Host         string        `json:"host" env:"SERVER_HOST" default:"localhost"`
-	Port         int           `json:"port" env:"SERVER_PORT" default:"8081"`
+	Port         int           `json:"port" env:"SERVER_PORT" default:"8080"`
 	ReadTimeout  time.Duration `json:"read_timeout" env:"SERVER_READ_TIMEOUT" default:"30s"`
 	WriteTimeout time.Duration `json:"write_timeout" env:"SERVER_WRITE_TIMEOUT" default:"30s"`
 	IdleTimeout  time.Duration `json:"idle_timeout" env:"SERVER_IDLE_TIMEOUT" default:"60s"`

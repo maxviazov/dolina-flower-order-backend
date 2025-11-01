@@ -76,7 +76,7 @@ go run cmd/server/main.go
 
 Основные переменные окружения:
 - `SERVER_HOST` - хост сервера (по умолчанию: localhost)
-- `SERVER_PORT` - порт сервера (по умолчанию: 8081)
+- `SERVER_PORT` - порт сервера (по умолчанию: 8080)
 - `LOG_LEVEL` - уровень логирования (trace, debug, info, warn, error, fatal, panic)
 - `LOG_FORMAT` - формат логов (json, console)
 - `JWT_SECRET` - секретный ключ для JWT токенов
