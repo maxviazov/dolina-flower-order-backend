@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/dto"
 	"github.com/maxviazov/dolina-flower-order-backend/internal/services"
 )
 
@@ -18,7 +19,7 @@ func NewOrderHandler(orderService *services.OrderService) *OrderHandler {
 }
 
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
-	var req services.CreateOrderRequest
+	var req dto.CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request: " + err.Error()})
 		return

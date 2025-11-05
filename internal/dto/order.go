@@ -1,13 +1,15 @@
 package dto
 
-// CreateOrderRequest представляет запрос на создание нового заказа.	ype CreateOrderRequest struct {
+// CreateOrderRequest представляет запрос на создание нового заказа.
+type CreateOrderRequest struct {
 	MarkBox    string                   `json:"mark_box" binding:"required,min=1,max=10"`
 	CustomerID string                   `json:"customer_id" binding:"required,min=1"`
 	Items      []CreateOrderItemRequest `json:"items" binding:"required,min=1,dive"`
 	Notes      string                   `json:"notes,omitempty"`
 }
 
-// CreateOrderItemRequest представляет элемент заказа в запросе на создание.	ype CreateOrderItemRequest struct {
+// CreateOrderItemRequest представляет элемент заказа в запросе на создание.
+type CreateOrderItemRequest struct {
 	Variety    string  `json:"variety" binding:"required,min=1,max=100"`
 	Length     int     `json:"length" binding:"required,min=1,max=200"`
 	BoxCount   float64 `json:"box_count" binding:"required,gt=0"`

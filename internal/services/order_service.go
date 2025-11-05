@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/maxviazov/dolina-flower-order-backend/internal/domain"
 	"github.com/maxviazov/dolina-flower-order-backend/internal/dto"
 )
@@ -49,7 +50,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, req dto.CreateOrderReque
 		order.Items = append(order.Items, item)
 	}
 
-	order.CalculateTotal()
+	order.TotalAmount = order.CalculateTotal()
 
 	if err := s.repo.Create(ctx, order); err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
