@@ -43,6 +43,7 @@ jobs:
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
+            --service-account ${{ secrets.GCP_SERVICE_ACCOUNT }} \
             --add-cloudsql-instances dolina-flower-order:europe-west1:dolina-postgres \
             --set-env-vars "DB_HOST=/cloudsql/dolina-flower-order:europe-west1:dolina-postgres" \
             --set-env-vars "DB_PORT=5432" \
