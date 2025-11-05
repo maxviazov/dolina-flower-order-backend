@@ -42,4 +42,12 @@ jobs:
             --image ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO }}/dolina-flower-order-backend:latest \
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --add-cloudsql-instances dolina-flower-order:europe-west1:dolina-postgres \
+            --set-env-vars "DB_HOST=/cloudsql/dolina-flower-order:europe-west1:dolina-postgres" \
+            --set-env-vars "DB_PORT=5432" \
+            --set-env-vars "DB_USER=postgres" \
+            --set-env-vars "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+            --set-env-vars "DB_NAME=dolina" \
+            --set-env-vars "SERVER_PORT=8080" \
+            --set-env-vars "ENV=production"
