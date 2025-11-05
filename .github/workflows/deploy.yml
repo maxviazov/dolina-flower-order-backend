@@ -45,10 +45,4 @@ jobs:
             --allow-unauthenticated \
             --service-account ${{ secrets.GCP_SERVICE_ACCOUNT }} \
             --add-cloudsql-instances dolina-flower-order:europe-west1:dolina-postgres \
-            --set-env-vars "DB_HOST=/cloudsql/dolina-flower-order:europe-west1:dolina-postgres" \
-            --set-env-vars "DB_PORT=5432" \
-            --set-env-vars "DB_USER=postgres" \
-            --set-env-vars "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            --set-env-vars "DB_NAME=dolina" \
-            --set-env-vars "SERVER_PORT=8080" \
-            --set-env-vars "ENV=production"
+            --set-env-vars "DB_HOST=/cloudsql/dolina-flower-order:europe-west1:dolina-postgres,DB_PORT=5432,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_NAME=dolina,SERVER_HOST=0.0.0.0,SERVER_PORT=8080,ENV=production"
