@@ -7,14 +7,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/maxviazov/dolina-flower-order-backend/internal/domain"
-	"github.com/maxviazov/dolina-flower-order-backend/internal/repository/sqlite"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/dto"
 )
 
 type OrderService struct {
-	repo *sqlite.Repository
+	repo domain.OrderRepository
 }
 
-func NewOrderService(repo *sqlite.Repository) *OrderService {
+func NewOrderService(repo domain.OrderRepository) *OrderService {
 	return &OrderService{repo: repo}
 }
 
@@ -22,7 +22,7 @@ func (s *OrderService) GetAvailableFlowers(ctx context.Context) ([]domain.Item, 
 	return s.repo.GetAvailableFlowers(ctx)
 }
 
-func (s *OrderService) CreateOrder(ctx context.Context, req CreateOrderRequest) (*domain.Order, error) {
+func (s *OrderService) CreateOrder(ctx context.Context, req dto.CreateOrderRequest) (*domain.Order, error) {
 	order := &domain.Order{
 		ID:         uuid.New().String(),
 		MarkBox:    req.MarkBox,
@@ -60,23 +60,4 @@ func (s *OrderService) CreateOrder(ctx context.Context, req CreateOrderRequest) 
 
 func (s *OrderService) GetOrderByID(ctx context.Context, id string) (*domain.Order, error) {
 	return s.repo.GetByID(ctx, id)
-}
-
-type CreateOrderRequest struct {
-	MarkBox    string                   `json:"mark_box" binding:"required,min=1,max=10"`
-	CustomerID string                   `json:"customer_id" binding:"required,min=1"`
-	Items      []CreateOrderItemRequest `json:"items" binding:"required,min=1,dive"`
-	Notes      string                   `json:"notes,omitempty"`
-}
-
-type CreateOrderItemRequest struct {
-	Variety    string  `json:"variety" binding:"required,min=1,max=100"`
-	Length     int     `json:"length" binding:"required,min=1,max=200"`
-	BoxCount   float64 `json:"box_count" binding:"required,gt=0"`
-	PackRate   int     `json:"pack_rate" binding:"required,min=1"`
-	TotalStems int     `json:"total_stems" binding:"required,min=1"`
-	FarmName   string  `json:"farm_name" binding:"required,min=1,max=100"`
-	TruckName  string  `json:"truck_name" binding:"required,min=1,max=100"`
-	Comments   string  `json:"comments,omitempty"`
-	Price      float64 `json:"price,omitempty" binding:"gte=0"`
 }

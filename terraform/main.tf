@@ -1,100 +1,153 @@
 terraform {
+  required_version = ">= 1.0"
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
+    google = {
+      source  = "hashicorp/google"
       version = "~> 5.0"
     }
   }
 }
 
-provider "aws" {
-  region = var.aws_region
+provider "google" {
+  project = var.gcp_project_id
+  region  = var.gcp_region
 }
 
-variable "aws_region" {
-  default = "us-east-1"
+# Enable required Google Cloud services
+resource "google_project_service" "run" {
+  service = "run.googleapis.com"
 }
 
-# Используем только in-memory storage для MVP
-
-# Lambda
-resource "aws_lambda_function" "api" {
-  filename         = "lambda.zip"
-  function_name    = "dolina-flower-order-api"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "main"
-  runtime         = "go1.x"
-  timeout         = 30
-
-
+resource "google_project_service" "sqladmin" {
+  service = "sqladmin.googleapis.com"
 }
 
-resource "aws_iam_role" "lambda_role" {
-  name = "dolina-lambda-role"
+resource "google_project_service" "artifactregistry" {
+  service = "artifactregistry.googleapis.com"
+}
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
+resource "google_project_service" "cloudbuild" {
+  service = "cloudbuild.googleapis.com"
+}
+
+# Artifact Registry for Docker images
+resource "google_artifact_registry_repository" "repo" {
+  location      = var.gcp_region
+  repository_id = "${var.service_name}-repo"
+  format        = "DOCKER"
+  description   = "Docker repository for ${var.service_name}"
+
+  depends_on = [google_project_service.artifactregistry]
+}
+
+# Cloud SQL for PostgreSQL
+resource "google_sql_database_instance" "db_instance" {
+  name             = "${var.service_name}-db-instance"
+  database_version = "POSTGRES_15"
+  region           = var.gcp_region
+
+  settings {
+    tier = "db-g1-small" # Budget-friendly tier
+    ip_configuration {
+      ipv4_enabled    = true
+      private_network = "projects/${var.gcp_project_id}/global/networks/default"
+    }
+  }
+
+  deletion_protection = false # Set to true in production
+
+  depends_on = [google_project_service.sqladmin]
+}
+
+resource "google_sql_database" "database" {
+  instance = google_sql_database_instance.db_instance.name
+  name     = var.db_name
+}
+
+resource "google_sql_user" "db_user" {
+  instance = google_sql_database_instance.db_instance.name
+  name     = var.db_user
+  password = var.db_password
+}
+
+# Cloud Run service
+resource "google_cloud_run_v2_service" "service" {
+  name     = var.service_name
+  location = var.gcp_region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    scaling {
+      min_instance_count = 0 # Scale to zero for cost savings
+      max_instance_count = 2
+    }
+
+    containers {
+      image = "${google_artifact_registry_repository.repo.location}-docker.pkg.dev/${var.gcp_project_id}/${google_artifact_registry_repository.repo.repository_id}/${var.service_name}:latest"
+      ports {
+        container_port = 8080
       }
-    ]
-  })
+
+      env {
+        name  = "SERVER_PORT"
+        value = "8080"
+      }
+      env {
+        name  = "DB_HOST"
+        value = google_sql_database_instance.db_instance.private_ip_address
+      }
+      env {
+        name  = "DB_PORT"
+        value = "5432"
+      }
+      env {
+        name  = "DB_USER"
+        value = google_sql_user.db_user.name
+      }
+      env {
+        name  = "DB_PASSWORD"
+        value = google_sql_user.db_user.password
+      }
+      env {
+        name  = "DB_NAME"
+        value = google_sql_database.database.name
+      }
+      env {
+        name  = "DB_SSL_MODE"
+        value = "disable" # For private IP, SSL is not strictly needed but recommended for production
+      }
+      env {
+        name  = "GIN_MODE"
+        value = "release"
+      }
+    }
+
+    vpc_access {
+      connector = google_vpc_access_connector.connector.id
+      egress    = "ALL_TRAFFIC"
+    }
+  }
+
+  depends_on = [
+    google_project_service.run,
+    google_sql_database_instance.db_instance,
+  ]
+}
+
+# Serverless VPC Access Connector
+resource "google_vpc_access_connector" "connector" {
+  name          = "${var.service_name}-vpc-connector"
+  region        = var.gcp_region
+  ip_cidr_range = "10.8.0.0/28"
+  network       = "default"
 }
 
 
-
-resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-  role       = aws_iam_role.lambda_role.name
-}
-
-# API Gateway
-resource "aws_api_gateway_rest_api" "api" {
-  name = "dolina-flower-order-api"
-}
-
-resource "aws_api_gateway_resource" "proxy" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_method" "proxy" {
-  rest_api_id   = aws_api_gateway_rest_api.api.id
-  resource_id   = aws_api_gateway_resource.proxy.id
-  http_method   = "ANY"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "lambda" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_method.proxy.resource_id
-  http_method = aws_api_gateway_method.proxy.http_method
-
-  integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.api.invoke_arn
-}
-
-resource "aws_api_gateway_deployment" "api" {
-  depends_on = [aws_api_gateway_integration.lambda]
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  stage_name  = "prod"
-}
-
-resource "aws_lambda_permission" "api_gw" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
-}
-
-output "api_url" {
-  value = aws_api_gateway_deployment.api.invoke_url
+# Allow public access to Cloud Run
+resource "google_cloud_run_service_iam_member" "public_access" {
+  location = google_cloud_run_v2_service.service.location
+  project  = google_cloud_run_v2_service.service.project
+  service  = google_cloud_run_v2_service.service.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }

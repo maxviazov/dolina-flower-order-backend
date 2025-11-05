@@ -1,31 +1,11 @@
 package domain
 
-import (
-	"context"
-)
-
-// OrderRepository интерфейс для работы с заказами
-type OrderRepository interface {
+// OrderRepository определяет интерфейс для работы с хранилищем заказов.
+// Это позволяет абстрагироваться от конкретной реализации базы данных.	ype OrderRepository interface {
+	GetAvailableFlowers(ctx context.Context) ([]Item, error)
 	Create(ctx context.Context, order *Order) error
 	GetByID(ctx context.Context, id string) (*Order, error)
 	GetByStatus(ctx context.Context, status OrderStatus) ([]*Order, error)
 	Update(ctx context.Context, order *Order) error
-}
-
-// CustomerRepository интерфейс для работы с клиентами
-type CustomerRepository interface {
-	Create(ctx context.Context, customer *Customer) error
-	GetByID(ctx context.Context, id string) (*Customer, error)
-	GetByEmail(ctx context.Context, email string) (*Customer, error)
-}
-
-// FarmOrderRepository интерфейс для работы с заказами фермы
-type FarmOrderRepository interface {
-	Create(ctx context.Context, farmOrder *FarmOrder) error
-	GetByID(ctx context.Context, id string) (*FarmOrder, error)
-	GetByOrderID(ctx context.Context, orderID string) (*FarmOrder, error)
-	GetByStatus(ctx context.Context, status FarmOrderStatus) ([]*FarmOrder, error)
-	Update(ctx context.Context, farmOrder *FarmOrder) error
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, limit, offset int) ([]*FarmOrder, error)
+	Close() error
 }

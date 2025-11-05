@@ -14,7 +14,7 @@ import (
 	"github.com/maxviazov/dolina-flower-order-backend/internal/config"
 	"github.com/maxviazov/dolina-flower-order-backend/internal/handlers"
 	"github.com/maxviazov/dolina-flower-order-backend/internal/logger"
-	"github.com/maxviazov/dolina-flower-order-backend/internal/repository/sqlite"
+	"github.com/maxviazov/dolina-flower-order-backend/internal/repository/postgres"
 	"github.com/maxviazov/dolina-flower-order-backend/internal/services"
 )
 
@@ -23,7 +23,7 @@ type App struct {
 	logger *logger.Logger
 	server *http.Server
 	router *gin.Engine
-	repo   *sqlite.Repository
+	repo   *postgres.Repository
 }
 
 func New() *App {
@@ -45,7 +45,7 @@ func (a *App) Initialize() error {
 
 	a.logger.Info("Application initializing...")
 
-	repo, err := sqlite.NewRepository("./flowers.db")
+	repo, err := postgres.NewRepository(a.config.Database)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
@@ -70,7 +70,6 @@ func (a *App) Initialize() error {
 
 func (a *App) setupMiddleware() {
 	a.router.Use(a.loggingMiddleware())
-	a.router.Use(gin.Logger())
 	a.router.Use(gin.Recovery())
 	a.router.Use(a.corsMiddleware())
 }
